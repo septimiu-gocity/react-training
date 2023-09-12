@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import useQuery from "./components/hooks/useQuery";
+import useMutation from "./components/hooks/useMutation";
+
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import React from "react";
 import Header from "./components/Header";
@@ -10,21 +13,48 @@ function App() {
     const [showAddTask, setShowAddTask] = useState(false);
     const [tasks, setTasks] = useState([]);
 
+    // Fetch data
+    const {
+        data: fetchedTasks,
+        fetchData,
+        isLoading,
+        error: errorFetch,
+    } = useQuery({
+        url: "http://localhost:5000/tasks",
+        method: "GET",
+    });
+
+    // Fetch the data when first rendering the page
     useEffect(() => {
-        const getTasks = async () => {
-            const tasksFromServer = await fetchTasks();
-            setTasks(tasksFromServer);
-        };
-        getTasks();
+        fetchData();
     }, []);
 
-    // Fetch Tasks
-    const fetchTasks = async () => {
-        const res = await fetch("http://localhost:5000/tasks");
-        const data = await res.json();
+    useEffect(() => {
+        console.log(tasks);
+    }, [tasks]);
 
-        return data;
-    };
+    // Set the tasks with the new fetched data
+    useEffect(() => {
+        setTasks(fetchedTasks);
+    }, [fetchedTasks]);
+
+    // Modify data
+
+    const { error } = useMutation({
+        url: "http://localhost:5000/tasks",
+        method: "PUT",
+        headers: {
+            "Content-type": "application/json",
+        },
+    });
+
+    // // Fetch Tasks
+    // const fetchTasks = async () => {
+    //     const res = await fetch("http://localhost:5000/tasks");
+    //     const data = await res.json();
+
+    //     return data;
+    // };
 
     // Fetch Task
     const fetchTask = async (id) => {
@@ -34,21 +64,27 @@ function App() {
         return data;
     };
 
-    // Add Task
-    const addTask = async (task) => {
-        const res = await fetch("http://localhost:5000/tasks", {
-            method: "POST",
-            headers: {
-                "Content-type": "application/json",
-            },
-            body: JSON.stringify(task),
-        });
+    // // Add Task
+    // const addTask = async (task) => {
+    //     const res = await fetch("http://localhost:5000/tasks", {
+    //         method: "POST",
+    //         headers: {
+    //             "Content-type": "application/json",
+    //         },
+    //         body: JSON.stringify(task),
+    //     });
 
-        const data = await res.json();
-        setTasks([...tasks, data]);
-        // const id = Math.floor(Math.random() * 10000) + 1;
-        // const newTask = { id, ...task };
-        // setTasks([...tasks, newTask]);
+    //     const data = await res.json();
+    //     setTasks([...tasks, data]);
+
+    // };
+
+    // Add Task
+
+    const addTask = async (task) => {
+        await fetchData(task);
+
+        setTasks([...tasks, task]);
     };
 
     // Delete task
@@ -87,16 +123,16 @@ function App() {
                     <Route
                         path="/"
                         exact
-                        element={(
+                        element={
                             <React.Fragment>
                                 {showAddTask && <AddTask onAdd={addTask} />}
-                                {tasks.length > 0 ? (
+                                {!isLoading && tasks && tasks.length > 0 ? (
                                     <Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder} />
                                 ) : (
                                     "No tasks to show!"
                                 )}
                             </React.Fragment>
-                        )}
+                        }
                     />
                     <Route path="/about" Component={About} />
                 </Routes>
